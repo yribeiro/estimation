@@ -11,31 +11,46 @@ def g_h_filter(data, x0, dx, g, h, dt):
     """
     # set initial conditions
     x_est = x0
-    estimates = [x_est]
+    estimates, predictions = [], []
 
-    # loop over all measurements
+    # loop over all measurements from t1
     for z in data:
-        # predict
+        # predict what the value will be at t1
         x_pred = x_est + (dx * dt)
+        predictions.append(x_pred)
         dx = dx
 
-        # get the residual between the measurement and the prediction
+        # get the residual between the measurement at t1 and the prediction t1
         residual = z - x_pred
 
-        # update the second order and state prediction from above
-        dx = dx + h * (residual / dt)
+        # update the second order and state prediction from above to get the estimate at t1
+        dx = dx + h * residual / dt
         x_est = x_pred + g * residual
 
         estimates.append(x_est)
 
-    return estimates
+    return estimates, predictions
 
 
 if __name__ == "__main__":
     import numpy as np
     from utils import plot_data
 
-    truth = [160 + i for i in range(10)]
-    measurements = [t + np.random.normal(0, 0.5) for t in truth]
+    # model initial conditions
+    x0 = 160
+    dx0 = 1
 
-    plot_data([], measurements, truth)
+    truth = [160, *[160 + i for i in range(12)]]
+    # measurements are taken every second
+    # measurements = [t + np.random.normal(0, 0.5) for t in truth]
+    measurements = [158.0, 164.2, 160.3, 159.9, 162.1, 164.6, 169.6, 167.4, 166.4, 171.0, 171.2, 172.6]
+    estimates, predictions = g_h_filter(
+        data=measurements,
+        x0=x0,
+        dx=dx0,
+        g=0.6,
+        h=2/3,
+        dt=1
+    )
+
+    plot_data(estimates, predictions, measurements, truth)
