@@ -29,3 +29,13 @@ def g_h_filter(data, x0, dx, g, h, dt):
         estimates.append(x_est)
 
     return estimates
+
+
+if __name__ == "__main__":
+    import numpy as np
+    from utils import plot_data
+
+    truth = [160 + i for i in range(10)]
+    measurements = [t + np.random.normal(0, 0.5) for t in truth]
+
+    plot_data([], measurements, truth)
