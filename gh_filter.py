@@ -40,16 +40,16 @@ if __name__ == "__main__":
     x0 = 160
     dx0 = 1
 
-    truth = [160, *[160 + i for i in range(12)]]
+    # this is a straight line and the filter is trying to track the progression
+    truth = [160, *[160 + i for i in range(1, 13)]]
     # measurements are taken every second
-    # measurements = [t + np.random.normal(0, 0.5) for t in truth]
-    measurements = [158.0, 164.2, 160.3, 159.9, 162.1, 164.6, 169.6, 167.4, 166.4, 171.0, 171.2, 172.6]
+    measurements = [t + np.random.normal(0, 2.5) for t in truth]
     estimates, predictions = g_h_filter(
         data=measurements,
         x0=x0,
         dx=dx0,
         g=0.6,
-        h=2/3,
+        h=1/3,
         dt=1
     )
 
