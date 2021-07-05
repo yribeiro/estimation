@@ -112,7 +112,16 @@ def predict_move_convolution(pdf, offset, kernel):
     for i in range(N):
         for k in range(kN):
             index = (i + (width - k) - offset) % N
+            # this line here is essentially convolving the current best guess of the state
+            # with the uncertainty of the prediction (kernel) to get to the next state
             prior[i] += pdf[index] * kernel[k]
+    # the variable is named prior here, as the predict step with the transition
+    # creates a new prior to be updated with the likelihood and evidence
+
+    # the transition is as follows:
+    # > prior_t0 * likelihood_t0 -> posterior_t0 (this is the estimate incorporating evidence)
+    # > posterior_t0 * transition_model -> prior_t1 (this is the predict step)
+    # > prior_t1 * likelihood_t1 -> posterior_t1 (this is the update step as before)
     return prior
 
 
@@ -142,12 +151,34 @@ if __name__ == "__main__":
     # plot_bars(belief, title=f'After prediction. move={move}', ylim=(0, .4))
 
     # moving belief based on uncertain transitions
-    initial_prior = np.array([0, 0, .4, .6, 0, 0, 0, 0, 0, 0])
+    initial_prior = np.array([1 / len(hallway)] * len(hallway))
+    move = 1  # move 1 to the right
+    starting_index = 0
+    true_position = np.array([0.0] * len(hallway))
+    true_position[starting_index] = 1.0
+
+    # simulate motion moving through hallway - the filter eventually settles on picking the position
     for i in range(100):
-        move = 1
-        plot_bars(initial_prior, title="Prior updates. Moving @ {move} per time step", show=True)
-        prior_after_transition = predict(initial_prior, 2, [0.1, 0.8, 0.1])
-        # plot_bars(prior_after_transition, title=f'After Predict Step. move={move}')
-        initial_prior = prior_after_transition
-        plt.pause(0.2)
+        # get the likelihood based on the measurement (75% chance of correct)
+        likelihood = hallway_likelihood(hallway, z=hallway[starting_index], z_prob=0.8)
+        posterior = update(likelihood, initial_prior)
+        plot_bars(initial_prior, title=f"Posterior estimates. Moving @ {move} per time step", show=True, ylim=(0, 1.2))
+        plt.scatter(np.array([i for i in range(len(hallway))]), true_position, color="r")
+        plt.xticks(
+            np.array([i for i in range(len(hallway))]),
+            np.array(["Door" if a == 1 else "Wall" for a in hallway])
+        )
+        plt.pause(1)
         plt.cla()
+
+        # convert the posterior into a prior with a motion model with a kernel uncertainty
+        prior_after_transition = predict(posterior, move, [0.05, 0.05, 0.8, 0.05, 0.05])
+        # update the prior
+        initial_prior = prior_after_transition
+
+        # move every time step - i.e. send control command to the machine
+        # move the index to the right
+        starting_index += move
+        starting_index %= len(hallway)
+        true_position = np.array([0.0] * len(hallway))
+        true_position[starting_index] = 1.0
