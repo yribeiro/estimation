@@ -8,7 +8,7 @@ def plot_data(estimates, predictions, measurements, truth):
     measurements = np.array(measurements)
     predictions = np.array(predictions)
     truth = np.array(truth)
-    time = np.array(range(1, len(measurements)+1))
+    time = np.array(range(1, len(measurements) + 1))
 
     plt.plot(truth, ls="-", color="k", label="Truth")
     plt.plot(time, estimates, ls=":", color="b", label="Estimates")
@@ -16,4 +16,12 @@ def plot_data(estimates, predictions, measurements, truth):
     plt.scatter(time, predictions, marker="^", color="r", label="Predictions")
     plt.grid()
     plt.legend()
+    plt.show()
+
+
+def plot_bars(arr: np.ndarray):
+    x = np.array([i for i in range(len(arr))])
+    plt.bar(x, arr)
+    plt.ylim(0, 1)
+    plt.grid()
     plt.show()
