@@ -39,9 +39,10 @@ if __name__ == "__main__":
     # model initial conditions
     x0 = 160
     dx0 = 1
+    count = 20
 
     # this is a straight line and the filter is trying to track the progression
-    truth = [160, *[160 + i for i in range(1, 13)]]
+    truth = [x0, *[x0 + dx0 * i for i in range(1, count)]]
     # measurements are taken every second
     measurements = [t + np.random.normal(0, 2.5) for t in truth]
     estimates, predictions = g_h_filter(
@@ -50,7 +51,7 @@ if __name__ == "__main__":
         dx=dx0,
         g=0.6,
         h=1/3,
-        dt=1
+        dt=dx0
     )
 
     plot_data(estimates, predictions, measurements, truth)
