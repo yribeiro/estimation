@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Tuple
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -21,11 +21,15 @@ def plot_data(estimates, predictions, measurements, truth):
     plt.show()
 
 
-def plot_bars(arr: np.ndarray, title: Optional[str] = None):
+def plot_bars(arr: np.ndarray, title: Optional[str] = None, ylim: Optional[Tuple] = None, show=True):
     x = np.array([i for i in range(len(arr))])
     if title:
         plt.title(label=title)
     plt.bar(x, arr)
-    plt.ylim(0, 1)
+    if ylim:
+        plt.ylim(*ylim)
+    else:
+        plt.ylim(0, 1)
     plt.grid()
-    plt.show()
+    if show:
+        plt.show(block=False)
