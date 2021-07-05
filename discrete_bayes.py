@@ -159,9 +159,13 @@ if __name__ == "__main__":
 
     # simulate motion moving through hallway - the filter eventually settles on picking the position
     for i in range(100):
+        measurement = hallway[starting_index]
         # get the likelihood based on the measurement (75% chance of correct)
-        likelihood = hallway_likelihood(hallway, z=hallway[starting_index], z_prob=0.8)
+        likelihood = hallway_likelihood(hallway, z=measurement, z_prob=0.8)
+        # run update method
         posterior = update(likelihood, initial_prior)
+
+        # plot visualisation
         plot_bars(initial_prior, title=f"Posterior estimates. Moving @ {move} per time step", show=True, ylim=(0, 1.2))
         plt.scatter(np.array([i for i in range(len(hallway))]), true_position, color="r")
         plt.xticks(
@@ -171,12 +175,13 @@ if __name__ == "__main__":
         plt.pause(1)
         plt.cla()
 
+        # run the predict method for the next state
         # convert the posterior into a prior with a motion model with a kernel uncertainty
         prior_after_transition = predict(posterior, move, [0.05, 0.05, 0.8, 0.05, 0.05])
         # update the prior
         initial_prior = prior_after_transition
 
-        # move every time step - i.e. send control command to the machine
+        # move every time step - i.e. send control command to the machine or simulation
         # move the index to the right
         starting_index += move
         starting_index %= len(hallway)
