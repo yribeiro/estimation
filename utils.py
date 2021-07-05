@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -19,8 +21,10 @@ def plot_data(estimates, predictions, measurements, truth):
     plt.show()
 
 
-def plot_bars(arr: np.ndarray):
+def plot_bars(arr: np.ndarray, title: Optional[str] = None):
     x = np.array([i for i in range(len(arr))])
+    if title:
+        plt.title(label=title)
     plt.bar(x, arr)
     plt.ylim(0, 1)
     plt.grid()
