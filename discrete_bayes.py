@@ -155,11 +155,14 @@ if __name__ == "__main__":
     move = 1  # move 1 to the right
     starting_index = 0
     true_position = np.array([0.0] * len(hallway))
-    true_position[starting_index] = 1.0
+    true_position[starting_index] = 1.1
+    prob_correct = 0.8
 
     # simulate motion moving through hallway - the filter eventually settles on picking the position
     for i in range(100):
-        measurement = hallway[starting_index]
+        # flip the measurement based on probability
+        measurement = hallway[starting_index] if np.random.rand() < prob_correct else 1 - hallway[starting_index]
+
         # get the likelihood based on the measurement (75% chance of correct)
         likelihood = hallway_likelihood(hallway, z=measurement, z_prob=0.8)
         # run update method
@@ -172,6 +175,8 @@ if __name__ == "__main__":
             np.array([i for i in range(len(hallway))]),
             np.array(["Door" if a == 1 else "Wall" for a in hallway])
         )
+        # plt the measurement
+        plt.scatter(np.array([starting_index]), np.array([measurement]), color="g")
         plt.pause(1)
         plt.cla()
 
@@ -186,4 +191,4 @@ if __name__ == "__main__":
         starting_index += move
         starting_index %= len(hallway)
         true_position = np.array([0.0] * len(hallway))
-        true_position[starting_index] = 1.0
+        true_position[starting_index] = 1.1
