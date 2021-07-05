@@ -1,7 +1,7 @@
 import copy
-
 import numpy as np
-from filterpy.discrete_bayes import normalize
+
+from filterpy.discrete_bayes import normalize, update
 
 
 def update_belief(hall, belief, z, correct_scale):
@@ -14,7 +14,9 @@ def update_belief(hall, belief, z, correct_scale):
             belief[i] *= correct_scale
 
 
-def scaled_update(hall, belief, z, z_prob):
+def _scaled_update(hall, belief, z, z_prob):
+    # Note: this method is superseeded by the method below - explicitly indicating the likelihood usage
+
     # this is a more sophisticated implementation of the update as it uses
     # vector indexing, probabilities instead of scaling and normalisation after update
     scale = z_prob / (1. - z_prob)
@@ -26,6 +28,29 @@ def scaled_update(hall, belief, z, z_prob):
     return posterior
 
 
+def scaled_update(hall, belief, z, z_prob):
+    # Note: this method is superseeded by the inbuilt update implementation in filterpy
+    scale = z_prob / (1. - z_prob)
+    lh = np.ones(len(hall))
+    # the scale here is essentially the distribution over the measurement
+    lh[hall == z] *= scale
+    return normalize(lh * belief)
+
+
+def hallway_likelihood(hall, z, z_prob):
+    """ compute likelihood that a measurement matches
+    positions in the hallway."""
+
+    try:
+        scale = z_prob / (1. - z_prob)
+    except ZeroDivisionError:
+        scale = 1e8
+
+    lh = np.ones(len(hall))
+    lh[hall == z] *= scale
+    return lh
+
+
 if __name__ == "__main__":
     # 1's indicate doors and 0's indicate walls
     hallway = np.array([1, 1, 0, 0, 0, 0, 0, 0, 1, 0])
@@ -34,10 +59,9 @@ if __name__ == "__main__":
 
     from utils import plot_bars
 
-    plot_bars(initial_prior)
     # we get a reading from the sensor
     reading = 1  # 1 is 'door'
-    print(f"Prior before update: {initial_prior}. Sum: {sum(initial_prior)}")
-    post = scaled_update(hallway, initial_prior, z=reading, z_prob=0.75)
-    print(f"Prior after update and normalisation: {post}. Sum: {sum(post)}")
-    plot_bars(post)
+    plot_bars(initial_prior, title=f"Prior. Sum: {sum(initial_prior):.2f}")
+    likelihood = hallway_likelihood(hallway, z=reading, z_prob=0.75)
+    post = update(likelihood, initial_prior)
+    plot_bars(post, title=f"Posterior after update and normalisation. Sum: {sum(post):.2f}")
