@@ -1,7 +1,7 @@
 import numpy as np
 import scipy
 
-from numpy.random import uniform, randn
+from numpy.random import uniform, randn, random
 
 
 def create_uniform_particles(x_range, y_range, hdg_range, N):
@@ -91,6 +91,53 @@ def estimate(particles, weights):
     mean = np.average(pos, weights=weights, axis=0)
     var = np.average((pos - mean) ** 2, weights=weights, axis=0)
     return mean, var
+
+
+def simple_resample(particles, weights):
+    """
+    This method does a simple resample that is based off the cummulative sum of the weights.
+
+    np.searchsorted(a, b) uses binary search to return the first index in "a" that has a value less than "b"
+    e.g. a = [0.1, 0.3, 0.4, 1.0] and b = 0.567
+
+    The return value would be 2 for index 2 as 0.4 < 0.567.
+
+    :param particles: Array of particles containing state vectors
+    :param weights: Array of weights for each particle representing the distribution across the state
+    """
+    N = len(particles)
+    cumulative_sum = np.cumsum(weights)
+    cumulative_sum[-1] = 1.  # avoid round-off error
+    # draw len(particles) number of samples from a uniform distribution between 0 and 1
+    # and then use binary search to generate the indices from the cum_sum
+
+    # the higher weighted particles occupy more of the cum_sum space and so have a higher chance of
+    # being sampled
+    indexes = np.searchsorted(cumulative_sum, random(N))
+
+    # resample according to indexes - these are effectively new particles
+    # NOTE: The important thing here is that the new particles contain the state of their ancestors!
+    #       as a result, we have tracking across time, because these particles are then passed into the predict
+    #       step
+    particles[:] = particles[indexes]
+    # have equal belief on all particles for the next step - this makes sense as all new particles
+    # should be close to the actual state
+    weights.fill(1.0 / N)
+
+
+def resample_from_index(particles, weights, indexes):
+    """
+    Method to resample based on "indices". The method does an inplace replacement of values to save on memory
+    consumption.
+
+    :param particles: Array of particles containing state vectors
+    :param weights: Array of weights for each particle representing the distribution across the state
+    :param indexes: Array on indices to use to generate new particles
+    :return:
+    """
+    particles[:] = particles[indexes]
+    weights.resize(len(particles))
+    weights.fill(1.0 / len(weights))
 
 
 if __name__ == "__main__":
