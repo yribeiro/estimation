@@ -1,7 +1,10 @@
 import numpy as np
-import scipy
+import matplotlib.pyplot as plt
 
+from filterpy.monte_carlo import systematic_resample
 from numpy.random import uniform, randn, random
+from numpy.linalg import norm
+from scipy.stats import norm as scipy_norm
 
 
 def create_uniform_particles(x_range, y_range, hdg_range, N):
@@ -68,9 +71,9 @@ def update(particles, weights, z, R, landmarks):
         # update the corresponding weights of each particle to the landmark,
         # by the likelihood of the measurement being close to the mean
 
-        # this step is the important density from "Sequential Important Sampling" and generates the likelhood
+        # this step is the important density from "Sequential Important Sampling" and generates the likelihood
         # in Bayes theorem
-        weights *= scipy.stats.norm(distance, R).pdf(z[i])
+        weights *= scipy_norm(distance, R).pdf(z[i])
 
     weights += 1.e-300  # avoid round-off to zero
     weights /= sum(weights)  # normalize - as specified in Bayes
@@ -140,10 +143,93 @@ def resample_from_index(particles, weights, indexes):
     weights.fill(1.0 / len(weights))
 
 
+def neff(weights):
+    return 1. / np.sum(np.square(weights))
+
+
+def run_pf1(
+        N, iters=18, sensor_std_err=.1, do_plot=True, plot_particles=False, xlim=(0, 20), ylim=(0, 20), initial_x=None
+):
+    """
+    run the particle filter algorithm
+
+    :param N: number of particles
+    :param iters: number of simulation steps
+    :param sensor_std_err: measurement std err
+    :param do_plot: plot to screen
+    :param plot_particles: plot all particles
+    :param xlim: xlim for graph
+    :param ylim: ylim for graph
+    :param initial_x: optional initial mean from which particles are drawn N(initial_x, (5, 5, pi / 4))
+    """
+    # placeholders
+    p1, p2, mu, var = None, None, None, None
+    # landmarks in the world - known
+    landmarks = np.array([[-1, 2], [5, 10], [12, 14], [18, 21]])
+    NL = len(landmarks)
+
+    plt.figure()
+
+    # create particles and weights
+    if initial_x is not None:
+        particles = create_gaussian_particles(mean=initial_x, std=(5, 5, np.pi / 4), N=N)
+    else:
+        # the heading range here goes from 0 - 2*pi
+        particles = create_uniform_particles(xlim, ylim, (0, 6.28), N)
+    weights = np.ones(N) / N
+
+    if plot_particles:
+        alpha = .20
+        if N > 5000:
+            alpha *= np.sqrt(5000) / np.sqrt(N)
+        plt.scatter(particles[:, 0], particles[:, 1],
+                    alpha=alpha, color='g')
+
+    xs = []
+    robot_pos = np.array([0., 0.])
+    for x in range(iters):
+        # the actual robot moves diagonally along the XY plane in this simulation
+        robot_pos += (1, 1)
+
+        # distance from robot to each landmark
+        # this step is SIMULATING a sensor measurement - in a real system this would come from
+        # a radar or sonar sensor
+        zs = (norm(landmarks - robot_pos, axis=1) + (randn(NL) * sensor_std_err))
+
+        # move diagonally forward to (x+1, x+1)
+        # this step is SIMULATING a contol input to the robot
+        # in this case the heading change is 0 and the velocity is North East in radians/dt and m/s respectively
+        predict(particles, u=(0.00, 1.414), std=(.2, .05))
+
+        # incorporate measurements
+        update(particles, weights, z=zs, R=sensor_std_err, landmarks=landmarks)
+
+        # resample if too few effective particles - neff does this for us
+        if neff(weights) < N / 2:
+            indexes = systematic_resample(weights)
+            resample_from_index(particles, weights, indexes)
+            assert np.allclose(weights, 1 / N)
+        mu, var = estimate(particles, weights)
+        xs.append(mu)
+
+        if plot_particles:
+            plt.scatter(particles[:, 0], particles[:, 1], color='k', marker=',', s=1)
+        p1 = plt.scatter(robot_pos[0], robot_pos[1], marker='+', color='k', s=180, lw=3)
+        p2 = plt.scatter(mu[0], mu[1], marker='s', color='r')
+
+    xs = np.array(xs)
+    if do_plot:
+        plt.legend([p1, p2], ['Actual', 'PF'], loc=4, numpoints=1)
+        plt.xlim(*xlim)
+        plt.ylim(*ylim)
+        print('final position error, variance:\n\t', mu - np.array([iters, iters]), var)
+        plt.show()
+
+
 if __name__ == "__main__":
     # in this script the particle state is modelled as [x, y, heading]
 
     # here we are not modelling the velocity because we are providing a control input
     # however, if we were passively tracking something then we would need to estimate velocity
     # and use that estimate in the predict step
-    pass
+    run_pf1(N=10, sensor_std_err=0.5, plot_particles=True)
