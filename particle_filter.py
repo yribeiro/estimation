@@ -232,4 +232,12 @@ if __name__ == "__main__":
     # here we are not modelling the velocity because we are providing a control input
     # however, if we were passively tracking something then we would need to estimate velocity
     # and use that estimate in the predict step
-    run_pf1(N=10, sensor_std_err=0.5, plot_particles=True)
+
+    # important lessons:
+    # 1) reducing the number of particles prevents us from representing the true distribution
+    # 2) using an initial gaussian to generate the particles improves the efficiency and variance of the estimation
+    # 3) filter degeneracy can happen if NONE of the particles match the state
+    # 4) using an initial gaussian / better prior can reduce the number of particles needed for tracking
+    # 5) increasing sensor noise causes increases variance in posterior (obviously as the likelihood depends on this)
+    run_pf1(N=500, sensor_std_err=0.5, plot_particles=True, initial_x=(1, 1, np.pi / 4))
+    run_pf1(N=500, sensor_std_err=0.5, plot_particles=True)
